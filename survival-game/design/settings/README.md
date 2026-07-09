@@ -31,6 +31,32 @@ critique is the strong signal.
 | 9 | [Galeheart](09-galeheart.md) | `sky` | 32/40 | 4/5 | 2/5 | Raft | Every machine you bolt down weighs your flying island toward the drowning sea — until your automation matures enough that you sail your entire base across the storm-shuffled map. |
 | 10 | [Hollow Saint](10-hollow-saint.md) | `titan` | 31/40 | 4/5 | 2/5 | Factorio | Your entire factory is a living organism you grow inside a dying god, and building beautifully is literally how you hide from its immune system. |
 
+## Round 2 — player-seeded concepts (2026-07-09)
+
+Two concepts seeded directly by the designer's briefs, developed and critiqued AFTER the golden rules
+and the round-1 lessons existed — so both were written to dodge the known failure modes, and both
+critiques test whether those dodges are mechanically real or just incantations. Scores are not directly
+comparable to round 1: these critics were explicitly primed with the failure catalog and graded harder.
+
+| # | Concept | Seed | Goal fit | Dist. | Feas. | Closest game | One-line hook |
+|---|---|---|---|---|---|---|---|
+| 11 | [Longfire](11-longfire.md) | early human colony | 28/40 | 4/5 | 2/5 | RimWorld | The tech tree is the population — every technology lives in a mortal head until you build the culture that can outlive one. |
+| 12 | [Starmoor](12-starmoor.md) | ship + mobile station | 29/40 | 4/5 | 3/5 | Starsector | A base-building game where the base must periodically flee its own success: your logistics empire has a lifespan by design, and the loudest thing you'll ever do is move home. |
+
+What round 2 added to the lesson list:
+
+6. **Presence-scaled world time is social poison.** Keying the world clock to player hours (Longfire's
+   Wheel) makes one heavy-playing friend age everyone's civilization — the group ends up rationing a
+   friend's permission to play. Key world time to colony/base *throughput*, never to login hours.
+7. **Bounded loss + tradeable inputs = pressure becomes rent.** If nothing can kill the base (Rule 1)
+   AND every input can be imported (compacts/trade), a rich enough base converts every threat into a
+   line-item fee and stops moving/deciding. At least one survival-critical input must be local-only, so
+   wealth can defer the reckoning but never delete it.
+8. **Check the beauty mechanic against the pressure mechanic.** Starmoor's windows are glare and a
+   predator faction hunts glare — the pressure system teaches the dark box, recreating Factorio's ugly
+   optimum with an enforcer. Beauty's costs must not be denominated in the exact currency the main
+   threat punishes.
+
 ## What the critiques taught us (cross-cutting lessons)
 
 Five failure modes recurred across nearly all ten settings, independent of theme. These are now baked into
