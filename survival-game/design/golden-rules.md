@@ -244,19 +244,23 @@ tooltip contains no numbers.
 
 **Every objective presented to players must originate from inspectable simulated state — an approaching
 storm front, a decaying signal, a hungry mouth — never from an authored quest log, numbered tier, or
-milestone popup. Every action must connect to the outer narrative goal in at most two "why?" links, legible
-inside the game world. The goal surface is server-shared, never per-player.**
+milestone popup. Every "why?" link between an action and the outer narrative goal must be legible inside
+the game world, and no link may exist for depth's sake. The goal surface is server-shared, never
+per-player.**
 
 This is the one mechanism that satisfies goal 8 without violating goal 6: when the simulation generates the
 goals, direction is constant but its sequence is never pre-defined, and every server's story differs. The
-two-why test: "Why smelt iron?" → "to armor the caravan" → "so it survives the crossing" (the north star).
-If the second why doesn't land on the narrative goal, the mechanic is decoration — cut it or rewire it.
-A shared forecast ("storm in two days, food at 40%") makes a group self-organize for free; per-player quest
-logs fragment co-op. And the simulation writes infinite quests a small team never has to author.
+why-chain test: walk the chain — "Why smelt iron?" → "to armor the caravan" → "so it survives the crossing"
+→ the north star. The chain may be as long as the design needs; depth is not the enemy. What's forbidden is
+an *unclear* link (the player can't see, in the world, why this step serves the next) or a *filler* link
+(a step whose only justification is adding progression). If removing a link doesn't break the chain, remove
+the link — not the depth. A shared forecast ("storm in two days, food at 40%") makes a group self-organize
+for free; per-player quest logs fragment co-op. And the simulation writes infinite quests a small team never
+has to author.
 
 *Broken when:* a popup reads "Craft 10 planks (0/10) — Reward: 50 XP"; an "Era II Unlocked!" banner ships; a
 playtester asks "what should I be doing?"; the honest answer to "why am I doing this?" is "to clear the
-quest log."
+quest log"; a crafting chain contains an intermediate product that exists only to make the chain longer.
 
 ---
 

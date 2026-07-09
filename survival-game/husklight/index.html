@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' fill='%23060a12'/%3E%3Ccircle cx='8' cy='8' r='4' fill='%23c9a227'/%3E%3C/svg%3E" />
+  <title>HUSKLIGHT</title>
+  <style>
+    :root {
+      --brass: #c9a227;
+      --brass-dim: #8a7326;
+      --teal: #46b5a5;
+      --ink: #060a12;
+      --panel: rgba(10, 16, 28, 0.82);
+      --warn: #d4703b;
+      --bad: #c94a3d;
+      --text: #cfd6e4;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { height: 100%; background: var(--ink); overflow: hidden;
+      font-family: "Avenir Next", Futura, "Segoe UI", "Helvetica Neue", sans-serif; color: var(--text); }
+    #cv { position: fixed; inset: 0; display: block; }
+
+    #join {
+      position: fixed; inset: 0; z-index: 20; display: flex; align-items: center; justify-content: center;
+      background: radial-gradient(ellipse at 50% 40%, #0b1322 0%, #05070d 70%);
+    }
+    #join .card {
+      width: min(440px, 92vw); padding: 36px 34px; border: 1px solid var(--brass-dim);
+      background: var(--panel); box-shadow: 0 0 60px rgba(201, 162, 39, 0.08);
+    }
+    #join h1 { font-weight: 300; letter-spacing: 0.42em; color: var(--brass); font-size: 30px; text-align: center; }
+    #join .rule { height: 1px; background: linear-gradient(90deg, transparent, var(--brass-dim), transparent); margin: 14px 0 18px; }
+    #join p.tag { font-size: 13px; line-height: 1.65; color: #9aa4b8; text-align: center; margin-bottom: 24px; }
+    #join label { display: block; font-size: 10px; letter-spacing: 0.2em; color: var(--brass-dim); margin: 14px 0 5px; text-transform: uppercase; }
+    #join input {
+      width: 100%; padding: 9px 12px; background: #0a0f1a; border: 1px solid #2a3448; color: var(--text);
+      font-size: 15px; letter-spacing: 0.06em; outline: none;
+    }
+    #join input:focus { border-color: var(--brass-dim); }
+    #board {
+      margin-top: 26px; width: 100%; padding: 12px; background: transparent; border: 1px solid var(--brass);
+      color: var(--brass); font-size: 13px; letter-spacing: 0.3em; text-transform: uppercase; cursor: pointer;
+      transition: background 0.15s, color 0.15s;
+    }
+    #board:hover { background: var(--brass); color: #0a0d14; }
+    #join .hint { margin-top: 14px; font-size: 11px; color: #5b657a; text-align: center; line-height: 1.5; }
+
+    .hudpane { position: fixed; z-index: 10; background: var(--panel); border: 1px solid #26314a; padding: 10px 12px; font-size: 12px; }
+    #hud-tl { left: 14px; top: 14px; min-width: 210px; }
+    #hud-tr { right: 14px; top: 14px; text-align: right; min-width: 230px; }
+    .bar { height: 8px; background: #131c2e; margin: 3px 0 8px; position: relative; }
+    .bar > div { height: 100%; transition: width 0.2s; }
+    #o2fill { background: var(--teal); }
+    #hpfill { background: var(--brass); }
+    .lbl { font-size: 10px; letter-spacing: 0.18em; color: #7d879c; text-transform: uppercase; }
+    .num { font-variant-numeric: tabular-nums; }
+    #inv { margin-top: 4px; color: #aeb7c9; line-height: 1.7; }
+    #hud-tr .big { font-size: 15px; color: var(--brass); }
+    #hud-tr div { line-height: 1.75; }
+    #drawline.over { color: var(--bad); }
+    #roomcode { cursor: pointer; color: var(--teal); }
+    #roomcode:hover { text-decoration: underline; }
+
+    #room-label {
+      position: fixed; top: 16px; left: 50%; transform: translateX(-50%); z-index: 10;
+      font-size: 13px; letter-spacing: 0.34em; text-transform: uppercase; color: var(--brass);
+      text-shadow: 0 0 12px rgba(201,162,39,0.5); opacity: 0; transition: opacity 0.6s;
+    }
+    #prompt {
+      position: fixed; bottom: 96px; left: 50%; transform: translateX(-50%); z-index: 10;
+      background: var(--panel); border: 1px solid var(--brass-dim); color: var(--text);
+      padding: 8px 16px; font-size: 13px; letter-spacing: 0.04em; display: none;
+    }
+    #prompt b { color: var(--brass); }
+    #log { position: fixed; left: 14px; bottom: 14px; z-index: 10; font-size: 12px; max-width: 46vw; }
+    #log div { padding: 2px 0; text-shadow: 0 1px 3px #000; }
+    #log .info { color: #8b96ac; } #log .good { color: var(--teal); }
+    #log .warn { color: var(--warn); } #log .bad { color: var(--bad); }
+
+    #down-overlay {
+      position: fixed; inset: 0; z-index: 15; display: none; align-items: center; justify-content: center;
+      background: radial-gradient(ellipse, rgba(150,30,20,0.25), rgba(5,6,10,0.9));
+      font-size: 18px; letter-spacing: 0.3em; color: var(--bad); text-transform: uppercase;
+    }
+    #offline-badge {
+      position: fixed; bottom: 14px; right: 14px; z-index: 10; display: none;
+      font-size: 10px; letter-spacing: 0.2em; color: var(--warn); border: 1px solid var(--warn);
+      padding: 4px 10px; text-transform: uppercase;
+    }
+    #controls-hint {
+      position: fixed; bottom: 14px; left: 50%; transform: translateX(-50%); z-index: 9;
+      font-size: 11px; color: #5b657a; letter-spacing: 0.08em;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="cv"></canvas>
+
+  <div id="join">
+    <div class="card">
+      <h1>HUSKLIGHT</h1>
+      <div class="rule"></div>
+      <p class="tag">The reactor is dimming. Ten thousand sleepers draw on its light,
+        and the ship is forgetting how to hold its breath.<br/>Keep them alive.</p>
+      <label for="name">Steward name</label>
+      <input id="name" maxlength="16" autocomplete="off" spellcheck="false" />
+      <label for="room">Hull registry (room code — share it to crew up)</label>
+      <input id="room" maxlength="12" autocomplete="off" spellcheck="false" />
+      <button id="board">Board the Husk</button>
+      <p class="hint">WASD / arrows to move · E to interact · R emergency O₂ (1 lithium)<br/>
+        Same registry code = same ship, same crew.</p>
+    </div>
+  </div>
+
+  <div id="hud-tl" class="hudpane" hidden>
+    <span class="lbl">Suit O₂</span>
+    <div class="bar"><div id="o2fill" style="width:100%"></div></div>
+    <span class="lbl">Vitals</span>
+    <div class="bar"><div id="hpfill" style="width:100%"></div></div>
+    <div id="inv"></div>
+  </div>
+
+  <div id="hud-tr" class="hudpane" hidden>
+    <div><span class="lbl">Reactor</span> <span class="big num" id="reactline"></span></div>
+    <div id="drawline" class="num"></div>
+    <div id="sleepline" class="num"></div>
+    <div id="dayline" class="num"></div>
+    <div><span class="lbl">Registry</span> <span id="roomcode" title="Click to copy crew link"></span></div>
+    <div id="crewline"></div>
+  </div>
+
+  <div id="room-label"></div>
+  <div id="prompt"></div>
+  <div id="log"></div>
+  <div id="down-overlay">Suit failure — recovered to cryo bay</div>
+  <div id="offline-badge">Relay unreachable — solo steward mode</div>
+  <div id="controls-hint" hidden>WASD move · E interact · R emergency O₂</div>
+
+  <script type="module" src="/src/main.ts"></script>
+</body>
+</html>
