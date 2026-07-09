@@ -18,7 +18,7 @@ The original brief, kept verbatim in spirit:
 4. **The random map changes your approach.** Strategy partly emerges from reacting to the environment.
 5. **Base building and combat feed each other.** Base investment unlocks better combat; exploration and victories unlock new things to build at home.
 6. **No clear lines.** No pre-defined milestones to cross — those make playthroughs linear and repetitive.
-7. **Aesthetics are mechanical.** Building beautifully should be functional, rewarded by an in-game mechanic, and fun — not a cosmetics tab.
+7. **Aesthetics are mechanical.** Building beautifully should be functional, rewarded by an in-game mechanic, and fun — not a cosmetics tab. If the game invites big, beautiful builds, a core mechanic must pay for them: unincentivized beauty doesn't get built.
 8. **Everything driven by in-game goals.** Never a moment of "why am I doing this?" One outer narrative goal, and a few legible mechanisms cascading from it down to what you're doing right now.
 
 **Platform:** browser-based, multiplayer by default (persistent small-server worlds, 2–20 players, friends-scale, not an MMO), real-time, hosted on something like Fly.io, built by a very small team.
@@ -223,22 +223,32 @@ fighter and a pure builder on the same server never have a reason to talk.
 
 ### Rule 12 — Beauty pays rent
 
-**The simulation must read emergent local properties of the working base — light, flow, symmetry, variety,
-sightlines, adjacency — and pay mechanical yield for them. Never score a checklist of decoration items or a
-fixed template. Never ship a purely cosmetic buildable. The mechanically optimal base must trend beautiful,
-never ugly.**
+**The simulation must read emergent properties of the working base — light, flow, symmetry, variety,
+scale, sightlines, adjacency — and pay real mechanical yield for them, delivered through the same core
+mechanics and narrative hooks that drive everything else. Never score a checklist of decoration items or a
+fixed template. Never ship a purely cosmetic buildable. Building big and beautiful must be a competitive
+strategy a player can commit to — and four walls with everything jammed in a corner must never strictly
+dominate it.**
 
-Goal 7 protects pride — the base as the thing players screenshot — but insists it be earned inside the
-system. The trap is Factorio's: when optimal is ugly spaghetti, pressure makes everyone build ugly, and
-pride dies. The other trap is the answer key: scoring beauty against a template produces one optimal pretty
-base and violates goal 3 — so score composable local properties that admit unlimited high-scoring layouts.
-Paying the yield in real economic terms makes beautification a genuine line item in the sacrifice economy.
-Scope bonus: computed-from-layout beauty needs no parallel decoration art track, and beautiful bases are a
-browser game's entire marketing budget.
+Goal 7 names a mixed-signals problem: building games love to hand you the tools for architecturally
+stunning structures while every incentive says the correct move is a windowless box with the machines
+crammed in a corner — so the grand build becomes charity, something you do after you've won instead of a
+way to win. Players who love building big still won't do it unpaid; unincentivized beauty doesn't get
+built. So beauty must yield something the survival economy actually wants, priced as a genuine line item in
+the sacrifice economy, and the reward must arrive as world logic (the ship's inspectors, the forest's
+favor) — never a bolted-on beauty meter, because everything you do and love in this game derives from its
+narrative hooks and core mechanics. Note the shape of the requirement: beauty is an optional strategy, not
+a mandate — the lean box stays viable — but committing to grand, beautiful building must be rational,
+competitive play, not self-expression the mechanics quietly punish. Two traps remain: Factorio's (optimal
+is ugly spaghetti, so pressure teaches everyone to build ugly and pride dies) and the answer key's (scoring
+against a template produces one optimal pretty base and violates goal 3 — score composable emergent
+properties that admit unlimited high-scoring layouts). Scope bonus: computed-from-layout beauty needs no
+parallel decoration art track, and beautiful bases are a browser game's entire marketing budget.
 
-*Broken when:* optimal-play screenshots are joyless resource grids; an art pass adds forty stat-less
-furniture items; every base grows an identical shrine corner of copy-pasted flowerpots; a buildable's
-tooltip contains no numbers.
+*Broken when:* the efficient answer is four walls with everything jammed in a corner, and big builds are
+what you do after you've already won; optimal-play screenshots are joyless resource grids; an art pass adds
+forty stat-less furniture items; every base grows an identical shrine corner of copy-pasted flowerpots; a
+buildable's tooltip contains no numbers.
 
 ### Rule 13 — The world asks, not the UI
 
@@ -322,7 +332,7 @@ argument circles one of these, this table is the tiebreaker.
 | No milestones (G6) vs. always knowing why (G8) | Source objectives from live world state on continuous price curves — the sim supplies direction, the player supplies order. (Rules 7, 13) |
 | Automation alleviates work (G2) vs. pressure never lapses (G1) | Conversion, not removal: every layer trades a chore for a smaller demand of a new kind — players climb abstraction layers rather than exiting the loop. (Rule 5) |
 | Hard game with real stakes (G1) vs. freedom to experiment (G3) | Bound the downside: threats tax resources, territory, tempo — never hours of built progress. Failure is tuition, not a wipe. (Rule 1) |
-| Mechanical beauty (G7) vs. many valid builds (G3) | Score emergent local properties, never templates or item checklists, so unlimited layouts can be both beautiful and profitable. (Rule 12) |
+| Mechanical beauty (G7) vs. many valid builds (G3) | Beauty is a rewarded strategy, not a template: score emergent properties so unlimited layouts stay viable — lean boxes included — while grand building genuinely pays. (Rule 12) |
 | Factorio-depth automation (G2) vs. browser compute + tiny team | Simulate flows as arithmetic; buy strategic variety through system collisions rather than content volume. (Rules 9, 14) |
 
 ## Load-bearing vs. aspirational
