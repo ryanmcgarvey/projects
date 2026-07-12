@@ -15,6 +15,7 @@ prototypes and let playtesting decide — Husklight is draft 1.
 | [design/golden-rules.md](design/golden-rules.md) | The constitution: 16 rules distilled from the eight founding goals, with smell tests, the tensions they resolve, and which rules are load-bearing vs. aspirational. Start here. |
 | [design/settings/](design/settings/README.md) | Ten candidate settings, each fully developed and adversarially critiqued, with a scoreboard, cross-cutting lessons, a recommendation, and a "steal list" of transplantable mechanics. |
 | [husklight/](husklight/) | **Playable draft 1** of the Husklight setting: browser co-op prototype — power triage, air, entropy breaches, cryo stewardship, and the first automation layer. Static Vite app, P2P multiplayer, no backend. |
+| [starmoor/](starmoor/) | **Playable MVP** of the Starmoor concept (steelmanned): taper + Fix + three predator factions, rigs/lanes/pickets/crew automation, thrive, and the full Weigh cycle. Pure dependency-free sim core behind enforced boundaries — renderer/net/persistence are swappable adapters. |
 
 ## Where we are
 

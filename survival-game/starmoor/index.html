@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' fill='%2305070d'/%3E%3Cpath d='M8 2 L13 12 L8 10 L3 12 Z' fill='%23d8b23a'/%3E%3C/svg%3E" />
+  <title>STARMOOR</title>
+  <style>
+    :root {
+      --brass: #d8b23a; --brass-dim: #8a7326; --teal: #7fd4e8; --ink: #05070d;
+      --panel: rgba(8, 12, 22, 0.85); --warn: #d4923b; --bad: #c94a3d; --good: #6ec98a;
+      --text: #cfd6e4; --dim: #5b657a;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { height: 100%; background: var(--ink); overflow: hidden;
+      font-family: "Avenir Next", Futura, "Segoe UI", "Helvetica Neue", sans-serif; color: var(--text); }
+    #cv { position: fixed; inset: 0; display: block; }
+    .lbl { font-size: 10px; letter-spacing: 0.16em; color: #7d879c; text-transform: uppercase; }
+    .num { font-variant-numeric: tabular-nums; }
+    .dim { color: var(--dim); } .warn { color: var(--warn); } .bad { color: var(--bad); }
+    .good { color: var(--good); } .brass { color: var(--brass); }
+
+    #join { position: fixed; inset: 0; z-index: 20; display: flex; align-items: center; justify-content: center;
+      background: radial-gradient(ellipse at 50% 40%, #0a1120 0%, #04060b 70%); }
+    #join .card { width: min(460px, 92vw); padding: 36px 34px; border: 1px solid var(--brass-dim);
+      background: var(--panel); box-shadow: 0 0 60px rgba(216, 178, 58, 0.08); }
+    #join h1 { font-weight: 300; letter-spacing: 0.42em; color: var(--brass); font-size: 30px; text-align: center; }
+    #join .rule { height: 1px; background: linear-gradient(90deg, transparent, var(--brass-dim), transparent); margin: 14px 0 18px; }
+    #join p.tag { font-size: 13px; line-height: 1.65; color: #9aa4b8; text-align: center; margin-bottom: 22px; }
+    #join label { display: block; font-size: 10px; letter-spacing: 0.2em; color: var(--brass-dim); margin: 14px 0 5px; text-transform: uppercase; }
+    #join input { width: 100%; padding: 9px 12px; background: #0a0f1a; border: 1px solid #2a3448; color: var(--text);
+      font-size: 15px; outline: none; }
+    #join input:focus { border-color: var(--brass-dim); }
+    #board { margin-top: 24px; width: 100%; padding: 12px; background: transparent; border: 1px solid var(--brass);
+      color: var(--brass); font-size: 13px; letter-spacing: 0.3em; text-transform: uppercase; cursor: pointer; }
+    #board:hover { background: var(--brass); color: #0a0d14; }
+    #join .hint { margin-top: 12px; font-size: 11px; color: var(--dim); text-align: center; line-height: 1.6; }
+
+    .pane { position: fixed; z-index: 10; background: var(--panel); border: 1px solid #223050; padding: 10px 12px; font-size: 12px; }
+    #hud-left { left: 12px; top: 12px; width: 230px; }
+    #hud-right { right: 12px; top: 12px; width: 300px; }
+    .bar { height: 7px; background: #131c2e; margin: 3px 0 8px; position: relative; }
+    .bar > div { height: 100%; }
+    .bar > i { position: absolute; top: -1px; bottom: -1px; width: 1px; background: rgba(255,255,255,0.35); }
+    #hullfill { background: var(--brass); }
+    #hold, #stocks { color: #aeb7c9; line-height: 1.7; }
+    .row { display: flex; justify-content: space-between; line-height: 1.8; gap: 8px; }
+    #chart-options .opt { display: flex; justify-content: space-between; align-items: center; gap: 6px;
+      border-top: 1px solid #1a2438; padding: 5px 0; line-height: 1.45; font-size: 11px; }
+    #chart-options button, #dark-btn { background: transparent; border: 1px solid var(--brass-dim); color: var(--brass);
+      font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; padding: 3px 8px; cursor: pointer; white-space: nowrap; }
+    #chart-options button:hover, #dark-btn:hover { background: var(--brass); color: #0a0d14; }
+    #dark-btn { margin-top: 6px; width: 100%; }
+    #dark-btn.on { border-color: var(--teal); color: var(--teal); }
+    .fac { margin-top: 6px; }
+    #emissions { margin-top: 8px; font-size: 11px; color: #aeb7c9; }
+    .crewrow { cursor: pointer; line-height: 1.7; }
+    .crewrow:hover { color: var(--brass); }
+    #crew-list { border-top: 1px solid #1a2438; margin-top: 8px; padding-top: 4px; }
+
+    #log { position: fixed; left: 12px; bottom: 12px; z-index: 10; font-size: 12px; max-width: 46vw; }
+    #log div { padding: 2px 0; text-shadow: 0 1px 3px #000; }
+    #log .info { color: #8b96ac; } #log .good { color: var(--good); }
+    #log .warn { color: var(--warn); } #log .bad { color: var(--bad); }
+
+    #prompt { position: fixed; bottom: 88px; left: 50%; transform: translateX(-50%); z-index: 10;
+      background: var(--panel); border: 1px solid var(--brass-dim); padding: 8px 16px; font-size: 13px; display: none; }
+    #prompt b { color: var(--brass); }
+    #palette { position: fixed; bottom: 40px; left: 50%; transform: translateX(-50%); z-index: 10;
+      background: var(--panel); border: 1px solid #223050; padding: 8px 14px; font-size: 12px; display: none; white-space: nowrap; }
+    #palette span { margin-right: 10px; color: #aeb7c9; }
+    #palette span.sel { color: var(--brass); }
+    #palette i { color: var(--dim); font-style: normal; font-size: 10px; }
+
+    #down-overlay { position: fixed; inset: 0; z-index: 15; display: none; align-items: center; justify-content: center;
+      background: radial-gradient(ellipse, rgba(150,30,20,0.25), rgba(4,5,9,0.9));
+      font-size: 17px; letter-spacing: 0.3em; color: var(--bad); text-transform: uppercase; }
+    #offline-badge { position: fixed; bottom: 12px; right: 12px; z-index: 10; display: none;
+      font-size: 10px; letter-spacing: 0.2em; color: var(--warn); border: 1px solid var(--warn); padding: 4px 10px; text-transform: uppercase; }
+    #controls-hint { position: fixed; bottom: 12px; left: 50%; transform: translateX(-50%); z-index: 9;
+      font-size: 11px; color: var(--dim); letter-spacing: 0.06em; }
+    #roomcode { cursor: pointer; color: var(--teal); }
+  </style>
+</head>
+<body>
+  <canvas id="cv"></canvas>
+
+  <div id="join">
+    <div class="card">
+      <h1>STARMOOR</h1>
+      <div class="rule"></div>
+      <p class="tag">The last free city drinks from whatever it anchors to — and gets easier to find
+        every day it stays. Feed it, light it, defend it.<br/>And when the vein thins: move it.</p>
+      <label for="name">Keeper name</label>
+      <input id="name" maxlength="16" autocomplete="off" spellcheck="false" />
+      <label for="room">Harbor registry (room code — share it to crew up)</label>
+      <input id="room" maxlength="12" autocomplete="off" spellcheck="false" />
+      <button id="board">Make Berth</button>
+      <p class="hint">WASD fly · SPACE fire · M mine · E act · B build · L run dark<br/>
+        Same registry = same city, same crew.</p>
+    </div>
+  </div>
+
+  <div id="hud-left" class="pane" hidden>
+    <span class="lbl">Hull</span>
+    <div class="bar"><div id="hullfill" style="width:100%"></div></div>
+    <div id="hold"></div>
+    <div id="stocks"></div>
+    <div id="crew-list"></div>
+  </div>
+
+  <div id="hud-right" class="pane" hidden>
+    <div id="chart-main"></div>
+    <div id="chart-options"></div>
+    <div id="factions"></div>
+    <div id="emissions"></div>
+    <button id="dark-btn">run dark [L]</button>
+    <div class="row" style="margin-top:6px"><span class="lbl">Registry</span><span id="roomcode"></span></div>
+  </div>
+
+  <div id="log"></div>
+  <div id="prompt"></div>
+  <div id="palette"></div>
+  <div id="down-overlay">Pod recovered — the cargo is still out there</div>
+  <div id="offline-badge">Relays unreachable — solo harbor</div>
+  <div id="controls-hint" hidden>WASD fly · SPACE fire · M mine · E act · B build · L run dark</div>
+
+  <script type="module" src="/src/app/main.ts"></script>
+</body>
+</html>
