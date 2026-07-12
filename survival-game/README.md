@@ -23,5 +23,7 @@ prototypes and let playtesting decide — Husklight is draft 1.
 2. ✅ Golden rules drafted and pressure-tested
 3. ✅ Ten settings explored and critiqued — top tier: **Husklight**, **Saltmoon**, **Hallowmoor**
 4. ✅ First playable draft: Husklight (core loop: pressure + sacrifice + one automation layer + the offline contract)
-5. ⬜ Deploy + playtest with 2-4 people; tune the pressure curve
-6. ⬜ Draft 2 of Husklight (Verdance/combat, Inspection Protocol) — or a rival setting prototype to compare
+5. ✅ Starmoor MVP built, reviewed (30 adversarially-verified findings fixed), and deployed
+6. ⬜ Playtest both prototypes with 2-4 people; decide which loop bites harder
+
+**Live prototypes** (one Vercel project hosts both): [Husklight](https://husklight-ryanmcgarveys-projects.vercel.app/) · [Starmoor](https://husklight-ryanmcgarveys-projects.vercel.app/starmoor/)

@@ -1,5 +1,9 @@
 # STARMOOR — MVP
 
+**Live at: https://husklight-ryanmcgarveys-projects.vercel.app/starmoor/** (shares the Husklight
+Vercel project — one static deploy hosts both prototypes; the build clones this repo and builds
+both games from the pinned commit.)
+
 The last free city in a burned-out cluster. Every player flies a cheap, nimble skiff; everyone shares
 one slow, precious freeport that drinks from whatever it's moored to — and gets easier to find every
 day it stays. Draft 1 of [the Starmoor concept](../design/settings/12-starmoor.md), built steelmanned
