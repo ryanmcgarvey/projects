@@ -5,7 +5,7 @@ import type { Command } from '../../core'
 export interface NetEvents {
   onHello(peer: string, name: string): void
   onWorld(raw: string, from: string): void
-  onState(state: unknown, from: string): void
+  onState(raw: string, from: string): void   // versioned serialize() payload — receiver validates
   onCmd(peer: string, cmd: Command): void
   onPeerLeave(peer: string): void
 }
@@ -35,9 +35,9 @@ export class Net {
       this.sendStateRaw = sendState as Sender
       this.sendCmdRaw = sendCmd as Sender
 
-      getHello((d: unknown, peer: string) => ev.onHello(peer, (d as { name: string }).name))
-      getWorld((d: unknown, peer: string) => ev.onWorld(d as string, peer))
-      getState((d: unknown, peer: string) => ev.onState(d, peer))
+      getHello((d: unknown, peer: string) => ev.onHello(peer, String((d as { name?: unknown })?.name ?? 'Keeper')))
+      getWorld((d: unknown, peer: string) => { if (typeof d === 'string') ev.onWorld(d, peer) })
+      getState((d: unknown, peer: string) => { if (typeof d === 'string') ev.onState(d, peer) })
       getCmd((d: unknown, peer: string) => ev.onCmd(peer, d as Command))
       room.onPeerJoin((peer: string) => this.peers.add(peer))
       room.onPeerLeave((peer: string) => { this.peers.delete(peer); ev.onPeerLeave(peer) })
@@ -50,6 +50,6 @@ export class Net {
 
   hello(name: string) { if (this.ok) this.sendHelloRaw({ name }) }
   world(raw: string, target: string) { if (this.ok) this.sendWorldRaw(raw, target) }
-  state(s: unknown) { if (this.ok && this.peers.size > 0) this.sendStateRaw(s) }
+  state(raw: string) { if (this.ok && this.peers.size > 0) this.sendStateRaw(raw) }
   cmd(c: Command) { if (this.ok) this.sendCmdRaw(c) }
 }

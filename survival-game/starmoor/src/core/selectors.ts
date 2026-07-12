@@ -60,6 +60,8 @@ export function chartTable(s: GameState): ChartTable {
 export interface FactionView {
   id: FactionId
   heat: number
+  heatPct: number            // vs HEAT_MAX — adapters never hardcode tuning
+  tierMarksPct: number[]     // T1/T2/T3 positions as percentages
   tier: number
   nextAt: number
   active: boolean
@@ -67,12 +69,16 @@ export interface FactionView {
 }
 
 export function factionsView(s: GameState): FactionView[] {
+  const marks = [C.HEAT_T1, C.HEAT_T2, C.HEAT_T3].map(t => Math.round((t / C.HEAT_MAX) * 100))
   return (['combine', 'breakers', 'hush'] as FactionId[]).map(id => {
     const f = s.factions[id]
     const tier = tierOf(f.heat)
     const nextAt = tier === 0 ? C.HEAT_T1 : tier === 1 ? C.HEAT_T2 : C.HEAT_T3
     return {
-      id, heat: Math.round(f.heat), tier, nextAt,
+      id, heat: Math.round(f.heat),
+      heatPct: Math.min(100, Math.round((f.heat / C.HEAT_MAX) * 100)),
+      tierMarksPct: marks,
+      tier, nextAt,
       active: s.npcs.some(n => n.faction === id),
       belligerence: f.belligerence,
     }
@@ -93,7 +99,7 @@ export interface RenderModel {
   shoals: { x: number; y: number; r: number }[]
   beacons: { id: number; x: number; y: number; revealed: boolean }[]
   modules: { kind: string; gx: number; gy: number; x: number; y: number; online: boolean; hp: number; marked: boolean; watts: number }[]
-  claims: { id: number; x: number; y: number; silo: number; siloRes: string; online: boolean; hp: number }[]
+  claims: { id: number; x: number; y: number; silo: number; siloPct: number; siloRes: string; online: boolean; hp: number }[]
   lanes: { id: number; x1: number; y1: number; x2: number; y2: number; damped: boolean; tithe: number; picket: boolean; midX: number; midY: number }[]
   npcs: { id: number; kind: string; faction: string; x: number; y: number; hpPct: number }[]
   players: { id: string; name: string; x: number; y: number; hull: number; down: boolean; thrusting: boolean; firing: boolean; mining: boolean }[]
@@ -129,7 +135,8 @@ export function renderModel(s: GameState): RenderModel {
       const b = s.bodies.find(x => x.id === cl.bodyId)
       return {
         id: cl.id, x: b?.x ?? 0, y: b?.y ?? 0,
-        silo: cl.silo, siloRes: cl.siloRes, online: cl.online, hp: cl.hp / C.RIG_HP,
+        silo: cl.silo, siloPct: cl.silo / C.SILO_CAP, siloRes: cl.siloRes,
+        online: cl.online, hp: cl.hp / C.RIG_HP,
       }
     }),
     lanes: s.lanes.map(l => {

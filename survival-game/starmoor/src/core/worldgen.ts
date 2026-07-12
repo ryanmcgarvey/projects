@@ -21,7 +21,7 @@ export function createGame(seedStr: string): GameState {
     modules: [],
     stocks: { ice: 25, ferrite: 70, isotopes: 12, anchorfeed: 130, burnstock: 0 },
     dark: false,
-    crew: [], recruitAt: 0, leaveAt: 0, starvedSince: 0, thrive: 0,
+    crew: [], recruitAt: 0, leaveAt: 0, starvedSince: 0, lowThriveSince: 0, thrive: 0,
     claims: [], lanes: [], npcs: [], pickups: [],
     players: {},
     factions: {
@@ -99,6 +99,22 @@ export function generateLeg(s: GameState, option: MooringOption | null) {
       r: randRange(s, 14, 30), res, richness,
     })
   }
+
+  // guarantee: denial means SCARCE, never absent — every leg has at least one
+  // workable body of each resource (a zero-ice leg would soft-lock the Weigh)
+  for (const res of DENIALS) {
+    if (s.bodies.some(b => b.res === res && b.richness > 0)) continue
+    const c = clusters[0]
+    s.bodies.push({
+      id: s.nextId++, kind: KIND_FOR[res],
+      x: Math.max(60, Math.min(s.field.w - 60, c.x + randRange(s, -120, 120))),
+      y: Math.max(60, Math.min(s.field.h - 60, c.y + randRange(s, -120, 120))),
+      r: randRange(s, 14, 22), res, richness: randRange(s, 0.4, 0.7),
+    })
+  }
+
+  // marks do not follow the city across a burn
+  for (const m of s.modules) m.markedUntil = 0
 
   // dust shoals: quiet country for lanes
   const shoalN = option ? Math.max(1, Math.min(4, option.shoals)) : randInt(s, 2, 4)

@@ -18,26 +18,43 @@ export function spend(stocks: Stocks, cost: Partial<Record<Res, number>>) {
 }
 
 export function stockCaps(s: GameState): Record<Res, number> {
-  const tanks = s.modules.filter(m => m.kind === 'tank' && m.online).length
+  // built (hp>0) tanks count, not online ones: a brownout must not vaporize stored surplus
+  const tanks = s.modules.filter(m => m.kind === 'tank' && m.hp > 0).length
   const caps = { ...C.BASE_CAP }
   for (const r of Object.keys(caps) as Res[]) caps[r] += tanks * C.TANK_CAP
+  caps.burnstock = 1e9 // the move fund is a reserve, not a commodity — never capped away
   return caps
 }
 
-export function addStock(s: GameState, res: Res, amount: number) {
-  const caps = stockCaps(s)
-  s.stocks[res] = clamp(s.stocks[res] + amount, 0, caps[res])
+export function stockSpace(s: GameState, res: Res): number {
+  return Math.max(0, stockCaps(s)[res] - s.stocks[res])
+}
+
+/** Deposit up to cap. Returns the amount actually accepted — callers must conserve the rest. */
+export function addStock(s: GameState, res: Res, amount: number): number {
+  if (amount <= 0) {
+    s.stocks[res] = Math.max(0, s.stocks[res] + amount)
+    return amount
+  }
+  const accepted = Math.min(amount, stockSpace(s, res))
+  s.stocks[res] += accepted
+  return accepted
+}
+
+export function sanitizeName(name: string): string {
+  return name.replace(/[<>&"'`]/g, '').trim().slice(0, 16) || 'Keeper'
 }
 
 export function ensurePlayer(s: GameState, id: string, name: string) {
-  if (s.players[id]) { s.players[id].name = name; return }
+  const clean = sanitizeName(name)
+  if (s.players[id]) { s.players[id].name = clean; return }
   s.players[id] = {
-    id, name,
+    id, name: clean,
     x: s.station.x, y: s.station.y + 60,
     hull: 100, hold: {}, downUntil: 0,
-    thrusting: false, firing: false, miningBody: -1,
+    thrusting: false, firing: false, miningBody: -1, lastStateT: 0,
   }
-  addLog(s, `${name} undocked a skiff from the yard.`, 'good')
+  addLog(s, `${clean} undocked a skiff from the yard.`, 'good')
 }
 
 export function removePlayer(s: GameState, id: string) {

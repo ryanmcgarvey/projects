@@ -8,12 +8,17 @@ export const C = {
   GRID: 11, GRID_CENTER: 5, CELL: 16,   // station module grid (world units per cell)
 
   // ship
-  SHIP_SPEED: 150,                 // client-authoritative movement cap (validated loosely)
+  SHIP_SPEED: 150,                 // hard cap; displacement per command is clamped to this
+  SHIP_ACCEL: 260, SHIP_DRAG: 1.6, // flight feel (integrated in the shell, enforced in core)
   SHIP_HP: 100,
   HOLD_CAP: 30,
   LASER_DPS: 14, LASER_RANGE: 110,
   MINE_RATE: 1.4, MINE_RANGE: 80,
   DOCK_RANGE: 110,
+  STATION_WORK_RANGE: 220,         // build/demolish/repair require being at the city
+  INTERACT_RANGE_RIG: 140,
+  INTERACT_RANGE_BEACON: 150,
+  INTERACT_RANGE_GATE: 200,
   RESPAWN_SECS: 5,
   HULL_REGEN_DOCKED: 4,
 
@@ -45,6 +50,7 @@ export const C = {
   HEAT_BREAKERS_SCRAP: 0.16,
   HEAT_HUSH_GLARE: 1.1, HEAT_HUSH_CHATTER: 0.5,
   HEAT_T1: 100, HEAT_T2: 220, HEAT_T3: 360,
+  HEAT_MAX: 440,                   // heat is a bounded meter, not an unbounded debt
   HEAT_ENCOUNTER_RELIEF: 0.55,     // multiplier applied when an encounter resolves
   ENCOUNTER_GAP: 120,              // min seconds between encounters per faction
   LEG_GRACE: 180,                  // no encounters right after arrival (the loop breathes)
@@ -70,6 +76,8 @@ export const C = {
   RECRUIT_FAST: 90, RECRUIT_SLOW: 260,   // arrival interval at thrive 100 / at min
   CREW_BOOST: 0.5,                 // assigned crew rate bonus (thrive-scaled)
   SIEGE_THRIVE_LEAVE: 15,
+  THRIVE_LOW_GRACE: 100,           // sustained misery before anyone leaves — a 60s defensive
+                                   // dark run must never cost crew (Hush counterplay stays viable)
 
   // the Weigh (steelman #2: paid forward, presence-scaled set-piece)
   WEIGH_BASE_COST: 500, WEIGH_PER_MODULE: 15,

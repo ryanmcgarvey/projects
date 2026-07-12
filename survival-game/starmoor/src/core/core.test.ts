@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import { createGame, serialize, deserialize, applyCommand, tick, C } from './index'
+import { createGame, serialize, deserialize, applyCommand, tick, weighCost, C } from './index'
 import { anchorfeedYield } from './sim/economy'
 import { tierOf } from './sim/emissions'
 import { computeThrive } from './sim/station'
+import { addStock, stockCaps } from './util'
 import { GameState, PlayerShip } from './types'
 
 function game(seed = 'test-seed'): GameState {
@@ -15,6 +16,7 @@ function addPlayer(s: GameState, id: string) {
   const p: PlayerShip = {
     id, name: id, x: s.station.x, y: s.station.y + 40,
     hull: C.SHIP_HP, hold: {}, downUntil: 0, thrusting: false, firing: false, miningBody: -1,
+    lastStateT: 0,
   }
   s.players[id] = p
 }
@@ -86,6 +88,8 @@ describe('emissions and faction heat', () => {
   it('one encounter per faction at a time, spawned past tier 1', () => {
     const s = game()
     s.tLeg = C.LEG_GRACE + 1
+    const body = s.bodies.find(b => b.richness > 0)!
+    s.claims.push({ id: 7201, bodyId: body.id, hp: C.RIG_HP, online: true, siloRes: body.res, silo: 40 })
     s.factions.breakers.heat = C.HEAT_T2 + 10
     run(s, 2)
     const breakers = s.npcs.filter(n => n.faction === 'breakers')
@@ -95,7 +99,7 @@ describe('emissions and faction heat', () => {
     // no double-spawn while the first encounter is alive
     expect(s.npcs.filter(n => n.faction === 'breakers').length).toBeLessThanOrEqual(count)
   })
-  it('combine posts a toll on the best lane and payToll clears it', () => {
+  it('combine posts a toll on the best lane and payToll (at the gate) clears it', () => {
     const s = game()
     s.tLeg = C.LEG_GRACE + 1
     const body = s.bodies.find(b => b.richness > 0)!
@@ -107,9 +111,32 @@ describe('emissions and faction heat', () => {
     expect(lane.tithe).toBeGreaterThan(0)
     const gate = s.npcs.find(n => n.kind === 'tollgate')!
     s.stocks.isotopes = 50
+    // parley requires flying to the gate
+    expect(applyCommand(s, 'p1', { c: 'payToll', npcId: gate.id }).ok).toBe(false)
+    s.players['p1'].x = gate.x
+    s.players['p1'].y = gate.y
     const res = applyCommand(s, 'p1', { c: 'payToll', npcId: gate.id })
     expect(res.ok).toBe(true)
     expect(lane.tithe).toBe(0)
+    expect(s.npcs.some(n => n.kind === 'tollgate')).toBe(false)
+  })
+
+  it('automated defenses never burn a toll gate — belligerence is a player choice', () => {
+    const s = game()
+    const body = s.bodies.find(b => b.richness > 0)!
+    s.claims.push({ id: 7101, bodyId: body.id, hp: C.RIG_HP, online: true, siloRes: body.res, silo: 10 })
+    s.lanes.push({ id: 7102, claimId: 7101, picket: true, damped: false, tithe: C.TOLL_T1 })
+    const midX = (body.x + s.station.x) / 2
+    const midY = (body.y + s.station.y) / 2
+    s.npcs.push({
+      id: 7103, kind: 'tollgate', faction: 'combine', x: midX, y: midY,
+      hp: 120, maxHp: 120, targetBody: -1, laneId: 7102, stolen: 0, leaving: false,
+    })
+    run(s, 30)
+    const gate = s.npcs.find(n => n.kind === 'tollgate')
+    expect(gate).toBeDefined()
+    expect(gate!.hp).toBe(120)
+    expect(s.factions.combine.belligerence).toBe(0)
   })
   it('tier thresholds are ordered', () => {
     expect(tierOf(C.HEAT_T1 - 1)).toBe(0)
@@ -224,6 +251,70 @@ describe('command validation (price everything)', () => {
   })
 })
 
+describe('command hardening (the door validates everything)', () => {
+  it('rejects non-finite ship state outright', () => {
+    const s = game()
+    const before = { x: s.players['p1'].x, y: s.players['p1'].y }
+    expect(applyCommand(s, 'p1', { c: 'state', x: NaN, y: NaN, thrusting: false, firing: false, miningBody: -1 }).ok).toBe(false)
+    expect(s.players['p1'].x).toBe(before.x)
+    expect(s.players['p1'].y).toBe(before.y)
+  })
+  it('clamps displacement — no client can teleport', () => {
+    const s = game()
+    const p = s.players['p1']
+    const start = { x: p.x, y: p.y }
+    applyCommand(s, 'p1', { c: 'state', x: p.x + 2000, y: p.y, thrusting: true, firing: false, miningBody: -1 })
+    expect(p.x - start.x).toBeLessThan(100)
+  })
+  it('hull work requires being at the city', () => {
+    const s = game()
+    s.stocks.ferrite = 999
+    s.players['p1'].x = 10
+    s.players['p1'].y = 10
+    expect(applyCommand(s, 'p1', { c: 'build', kind: 'gallery', gx: 5, gy: 4 }).ok).toBe(false)
+    expect(applyCommand(s, 'p1', { c: 'demolish', gx: 6, gy: 5 }).ok).toBe(false)
+  })
+})
+
+describe('economy conservation & the move fund', () => {
+  it('burnstock is never capped away — the reserve can always cover the Weigh', () => {
+    const s = game()
+    addStock(s, 'burnstock', 5000)
+    expect(s.stocks.burnstock).toBeGreaterThanOrEqual(5000)
+    expect(s.stocks.burnstock).toBeGreaterThan(weighCost(s))
+  })
+  it('full stores back-pressure the lane instead of vaporizing cargo', () => {
+    const s = game()
+    const body = s.bodies.find(b => b.richness > 0)!
+    s.claims.push({ id: 9001, bodyId: body.id, hp: C.RIG_HP, online: false, siloRes: body.res, silo: 50 })
+    s.lanes.push({ id: 9002, claimId: 9001, picket: false, damped: false, tithe: 0 })
+    s.stocks[body.res] = stockCaps(s)[body.res]  // destination full
+    const before = s.claims[0].silo
+    run(s, 10)
+    expect(s.claims[0].silo).toBeCloseTo(before, 1)  // nothing was destroyed in transit
+  })
+  it('transfer leaves overflow in the hold when stores are full', () => {
+    const s = game()
+    const p = s.players['p1']
+    s.stocks.ferrite = stockCaps(s).ferrite - 5
+    p.hold = { ferrite: 20 }
+    applyCommand(s, 'p1', { c: 'transfer' })
+    expect(s.stocks.ferrite).toBeCloseTo(stockCaps(s).ferrite, 5)
+    expect(p.hold.ferrite ?? 0).toBeCloseTo(15, 5)
+  })
+})
+
+describe('worldgen guarantees', () => {
+  it('every resource exists on every leg — denial is scarcity, never a softlock', () => {
+    for (const seed of ['a', 'b', 'c', 'd', 'e']) {
+      const s = createGame(seed)
+      for (const res of ['ice', 'ferrite', 'isotopes'] as const) {
+        expect(s.bodies.some(b => b.res === res && b.richness > 0)).toBe(true)
+      }
+    }
+  })
+})
+
 describe('serialization (host handoff safety)', () => {
   it('round-trips exactly', () => {
     const s = game()
@@ -231,5 +322,27 @@ describe('serialization (host handoff safety)', () => {
     const raw = serialize(s)
     const back = deserialize(raw)!
     expect(serialize(back)).toEqual(raw)
+  })
+  it('round-trips a battle-worn state exactly', () => {
+    const s = game()
+    s.tLeg = C.LEG_GRACE + 1
+    const body = s.bodies.find(b => b.richness > 0)!
+    s.claims.push({ id: 6001, bodyId: body.id, hp: C.RIG_HP, online: true, siloRes: body.res, silo: 40 })
+    s.lanes.push({ id: 6002, claimId: 6001, picket: true, damped: true, tithe: 0.15 })
+    s.factions.breakers.heat = C.HEAT_T2 + 5
+    s.factions.hush.heat = C.HEAT_T1 + 5
+    run(s, 120)
+    const raw = serialize(s)
+    const back = deserialize(raw)!
+    expect(serialize(back)).toEqual(raw)
+  })
+  it('rejects malformed snapshots instead of bricking the sim', () => {
+    expect(deserialize('not json')).toBeNull()
+    expect(deserialize('{"v":1,"s":{"t":1}}')).toBeNull()
+    expect(deserialize(JSON.stringify({ v: 99, s: {} }))).toBeNull()
+    const s = game()
+    const evil = JSON.parse(serialize(s))
+    evil.s.stocks.ferrite = 'a lot'
+    expect(deserialize(JSON.stringify(evil))).toBeNull()
   })
 })

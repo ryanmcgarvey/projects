@@ -15,26 +15,28 @@ export function tickCombat(s: GameState, dt: number) {
 
   for (const npc of s.npcs) stepNpc(s, npc, dt)
 
-  // defenses: point-defense ring + lane pickets
+  // defenses: point-defense ring + lane pickets.
+  // Automated guns NEVER target toll gates — burning a gate (and eating the
+  // permanent belligerence) is a player decision, not a turret accident.
   const gunsBoost = crewMult(s, 'guns')
   for (const m of s.modules) {
     if (m.kind !== 'pd' || !m.online) continue
     const at = moduleWorld(s, m)
-    const target = nearestNpc(s, at.x, at.y, C.PD_RANGE)
+    const target = nearestNpc(s, at.x, at.y, C.PD_RANGE, true)
     if (target) target.hp -= C.PD_DPS * gunsBoost * dt
   }
   for (const lane of s.lanes) {
     if (!lane.picket) continue
     const mid = laneMidpoint(s, lane)
     if (!mid) continue
-    const target = nearestNpc(s, mid.x, mid.y, C.PICKET_RANGE)
+    const target = nearestNpc(s, mid.x, mid.y, C.PICKET_RANGE, true)
     if (target) target.hp -= C.PICKET_DPS * dt
   }
 
-  // player lasers
+  // player lasers (may target anything, gates included — that's the choice)
   for (const p of Object.values(s.players)) {
     if (p.downUntil > s.t || !p.firing) continue
-    const target = nearestNpc(s, p.x, p.y, C.LASER_RANGE)
+    const target = nearestNpc(s, p.x, p.y, C.LASER_RANGE, false)
     if (target) target.hp -= C.LASER_DPS * dt
   }
 
@@ -201,10 +203,11 @@ export function holdTotal(p: PlayerShip): number {
   return (Object.values(p.hold) as number[]).reduce((a, b) => a + b, 0)
 }
 
-function nearestNpc(s: GameState, x: number, y: number, range: number): Npc | null {
+function nearestNpc(s: GameState, x: number, y: number, range: number, excludeGates: boolean): Npc | null {
   let best: Npc | null = null
   let bd = range
   for (const n of s.npcs) {
+    if (excludeGates && n.kind === 'tollgate') continue
     const d = dist(x, y, n.x, n.y)
     if (d < bd) { bd = d; best = n }
   }

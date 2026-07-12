@@ -1,6 +1,6 @@
 import { C } from '../constants'
 import { GameState } from '../types'
-import { addStock } from '../util'
+import { addStock, stockSpace } from '../util'
 import { crewMult } from './station'
 
 /** Anchorfeed yield from the mooring this instant. Moor-bound; nothing else supplies it. */
@@ -24,12 +24,15 @@ export function tickEconomy(s: GameState, dt: number) {
   addStock(s, 'anchorfeed', (anchorfeedYield(s) - anchorfeedDraw(s)) * dt)
 
   // refineries: ice → burnstock (the move fund IS refined survival margin)
+  // throttled by output space — never burn ice into a full tank
   const refineries = s.modules.filter(m => m.kind === 'refinery' && m.online).length
   if (refineries > 0 && s.stocks.ice > 0) {
     const rate = refineries * C.REFINE_RATE * crewMult(s, 'refinery')
-    const ice = Math.min(s.stocks.ice, rate * dt)
-    s.stocks.ice -= ice
-    addStock(s, 'burnstock', ice * C.REFINE_YIELD)
+    const ice = Math.min(s.stocks.ice, rate * dt, stockSpace(s, 'burnstock') / C.REFINE_YIELD)
+    if (ice > 0) {
+      s.stocks.ice -= ice
+      addStock(s, 'burnstock', ice * C.REFINE_YIELD)
+    }
   }
 
   // claim rigs: mine into silos; a full silo HALTS (haul-away demand)
@@ -40,12 +43,18 @@ export function tickEconomy(s: GameState, dt: number) {
     claim.silo = Math.min(C.SILO_CAP, claim.silo + C.RIG_RATE * body.richness * dt)
   }
 
-  // freight lanes: silo → station, skimmed by any toll gate on the lane
+  // freight lanes: silo → station, skimmed by any toll gate on the lane.
+  // Deliveries pause when the destination store is full — backpressure reaches
+  // the silo, the silo halts the rig, and the haul-away demand stays honest.
   for (const lane of s.lanes) {
     const claim = s.claims.find(cl => cl.id === lane.claimId)
     if (!claim || claim.silo <= 0) continue
-    const moved = Math.min(claim.silo, C.LANE_RATE * dt)
+    const keep = 1 - lane.tithe
+    if (keep <= 0) continue
+    const spaceLimited = stockSpace(s, claim.siloRes) / keep
+    const moved = Math.min(claim.silo, C.LANE_RATE * dt, spaceLimited)
+    if (moved <= 0) continue
     claim.silo -= moved
-    addStock(s, claim.siloRes, moved * (1 - lane.tithe))
+    addStock(s, claim.siloRes, moved * keep)
   }
 }

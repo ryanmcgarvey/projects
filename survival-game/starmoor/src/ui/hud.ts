@@ -3,6 +3,10 @@ import type { ChartTable, Command, Crew, Emissions, FactionView, LogEntry } from
 
 const $ = (id: string) => document.getElementById(id) as HTMLElement
 
+/** Names and log lines pass through the sim from peers — always escape. */
+const esc = (s: string) =>
+  s.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]!))
+
 export class Hud {
   private dispatch: (cmd: Command) => void
   private lastLogLen = -1
@@ -29,7 +33,7 @@ export class Hud {
     ct: ChartTable,
     factions: FactionView[],
     emis: Emissions,
-    self: { hull: number; hold: Partial<Record<string, number>>; holdTotal: number } | null,
+    self: { hull: number; hold: Partial<Record<string, number>>; holdTotal: number; holdCap: number } | null,
     crew: Crew[],
     stocks: Record<string, number>,
     log: LogEntry[],
@@ -37,7 +41,7 @@ export class Hud {
     // ship
     if (self) {
       ($('hullfill')).style.width = `${self.hull}%`
-      $('hold').textContent = `hold ${self.holdTotal.toFixed(0)}/30 · ` +
+      $('hold').textContent = `hold ${self.holdTotal.toFixed(0)}/${self.holdCap} · ` +
         (['ice', 'ferrite', 'isotopes'] as const)
           .map(r => `${r.slice(0, 2)} ${(self.hold[r] ?? 0).toFixed(0)}`).join(' · ')
     }
@@ -65,13 +69,12 @@ export class Hud {
       </div>`).join('') +
       (ct.phase === 'countdown' ? `<div class="opt"><button data-cancel="1">object — hold the city</button></div>` : '')
 
-    // factions
+    // factions (bar geometry comes from the selector — no tuning constants here)
     $('factions').innerHTML = factions.map(f => {
-      const pct = Math.min(100, (f.heat / 360) * 100)
+      const marks = f.tierMarksPct.map(m => `<i style="left:${m}%"></i>`).join('')
       return `<div class="fac">
         <span class="lbl">${f.id}${f.belligerence > 0 ? ` <span class="bad">†${f.belligerence}</span>` : ''}${f.active ? ' <span class="warn">— inbound</span>' : ''}</span>
-        <div class="bar"><div style="width:${pct}%; background:${f.id === 'combine' ? '#d8b23a' : f.id === 'breakers' ? '#c94a3d' : '#8fa8c9'}"></div>
-        <i style="left:27.7%"></i><i style="left:61.1%"></i></div>
+        <div class="bar"><div style="width:${f.heatPct}%; background:${f.id === 'combine' ? '#d8b23a' : f.id === 'breakers' ? '#c94a3d' : '#8fa8c9'}"></div>${marks}</div>
       </div>`
     }).join('')
 
@@ -82,13 +85,13 @@ export class Hud {
 
     // crew
     $('crew-list').innerHTML = crew.length
-      ? crew.map(c => `<div class="crewrow" data-crew="${c.id}" data-role="${c.role}" title="click to reassign">${c.name} — <b>${c.role}</b></div>`).join('')
+      ? crew.map(c => `<div class="crewrow" data-crew="${c.id}" data-role="${c.role}" title="click to reassign">${esc(c.name)} — <b>${c.role}</b></div>`).join('')
       : '<div class="dim">no hands aboard — thrive draws them in</div>'
 
-    // log
+    // log (peer-derived text: escaped)
     if (log.length !== this.lastLogLen) {
       this.lastLogLen = log.length
-      $('log').innerHTML = log.slice(-6).map(l => `<div class="${l.kind}">${l.msg}</div>`).join('')
+      $('log').innerHTML = log.slice(-6).map(l => `<div class="${l.kind}">${esc(l.msg)}</div>`).join('')
     }
   }
 

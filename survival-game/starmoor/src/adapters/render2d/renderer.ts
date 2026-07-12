@@ -118,7 +118,7 @@ export class Renderer {
       ctx.fillStyle = 'rgba(0,0,0,0.5)'
       ctx.fillRect(x - 11, y - 14 * z + 5, 22, 3)
       ctx.fillStyle = RES_COLOR[cl.siloRes] ?? '#fff'
-      ctx.fillRect(x - 11, y - 14 * z + 5, 22 * Math.min(1, cl.silo / 60), 3)
+      ctx.fillRect(x - 11, y - 14 * z + 5, 22 * Math.min(1, cl.siloPct), 3)
     }
 
     // beacons

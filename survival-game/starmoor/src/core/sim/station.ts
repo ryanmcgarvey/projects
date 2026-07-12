@@ -10,10 +10,18 @@ const LIT = new Set(['gallery', 'hydro'])
 /** Power budget: mark modules online, shedding by rank when overdrawn. */
 export function tickPower(s: GameState) {
   const transit = s.weigh.phase === 'transit'
+  // the taper has teeth: a city with no anchorfeed browns out to life support
+  // (starvedSince provides hysteresis — recovery needs a real buffer, not one tick)
+  const starving = s.stocks.anchorfeed <= 0 || s.starvedSince > 0
+  // life support set: during transit only core+pd; while starving the refinery
+  // stays lit too — a dying mooring must never lock the door on funding the Weigh
+  const KEEP_TRANSIT = new Set(['core', 'pd', 'reactor'])
+  const KEEP_STARVING = new Set(['core', 'pd', 'reactor', 'refinery', 'tank'])
   for (const m of s.modules) {
     m.online = m.hp > 0
     if (m.online && s.dark && LIT.has(m.kind)) m.online = false
-    if (m.online && transit && m.kind !== 'core' && m.kind !== 'pd') m.online = false
+    if (m.online && transit && !KEEP_TRANSIT.has(m.kind)) m.online = false
+    else if (m.online && starving && !KEEP_STARVING.has(m.kind)) m.online = false
   }
   let supply = 0
   let draw = 0
@@ -57,6 +65,7 @@ export function berthCap(s: GameState): number {
 }
 
 export function crewMult(s: GameState, role: 'refinery' | 'yard' | 'guns'): number {
+  if (s.stocks.anchorfeed <= 0) return 1 // unfed hands down tools
   const n = s.crew.filter(c => c.role === role).length
   const thriveScale = 1 + s.thrive / 200
   return 1 + n * C.CREW_BOOST * thriveScale
@@ -65,17 +74,26 @@ export function crewMult(s: GameState, role: 'refinery' | 'yard' | 'guns'): numb
 export function tickCrew(s: GameState, dt: number) {
   s.thrive = computeThrive(s)
 
-  // starvation: unfed crew stop mattering fast, then leave
+  // starvation: unfed crew stop mattering fast, then leave.
+  // Recovery requires a real buffer (hysteresis) so the brownout doesn't flicker.
   if (s.stocks.anchorfeed <= 0) {
     if (s.starvedSince === 0) {
       s.starvedSince = s.t
-      addLog(s, 'Anchorfeed dry — the city is holding its breath.', 'bad')
+      addLog(s, 'Anchorfeed dry — the city browns out to life support.', 'bad')
     }
-  } else {
+  } else if (s.starvedSince > 0 && s.stocks.anchorfeed > 8) {
     s.starvedSince = 0
+    addLog(s, 'The vein flows again. Decks re-lit.', 'good')
+  }
+  // misery needs a sustained grace window: a 60s defensive dark run (the Hush
+  // counterplay) or the deliberate blackout of a Weigh transit never fires crew
+  if (s.thrive < C.SIEGE_THRIVE_LEAVE && s.weigh.phase === 'moored') {
+    if (s.lowThriveSince === 0) s.lowThriveSince = s.t
+  } else {
+    s.lowThriveSince = 0
   }
   const starving = s.starvedSince > 0 && s.t - s.starvedSince > C.STARVE_CREW_LEAVE_SECS
-  const miserable = s.thrive < C.SIEGE_THRIVE_LEAVE && s.crew.length > 0
+  const miserable = s.lowThriveSince > 0 && s.t - s.lowThriveSince > C.THRIVE_LOW_GRACE
 
   if ((starving || miserable) && s.crew.length > 0 && s.t >= s.leaveAt) {
     const gone = s.crew.shift()!

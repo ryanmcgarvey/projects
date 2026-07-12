@@ -13,24 +13,46 @@ export function applyCommand(s: GameState, pid: string, cmd: Command): CmdResult
 
   switch (cmd.c) {
     case 'state': {
-      p.x = clamp(cmd.x, 0, s.field.w)
-      p.y = clamp(cmd.y, 0, s.field.h)
-      p.thrusting = cmd.thrusting
-      p.firing = cmd.firing
-      p.miningBody = cmd.miningBody
+      // the command layer trusts nothing: non-finite input is rejected outright,
+      // and displacement is clamped so no client can teleport regardless of shell
+      if (!Number.isFinite(cmd.x) || !Number.isFinite(cmd.y) ||
+          typeof cmd.miningBody !== 'number' || !Number.isFinite(cmd.miningBody)) {
+        return { ok: false, err: 'malformed state' }
+      }
+      const nx = clamp(cmd.x, 0, s.field.w)
+      const ny = clamp(cmd.y, 0, s.field.h)
+      const dtSim = Math.max(0, s.t - p.lastStateT)
+      const allow = C.SHIP_SPEED * 1.5 * dtSim + 6 // slack covers low-fps frames between sim ticks
+      const d = dist(nx, ny, p.x, p.y)
+      if (d > allow && d > 0) {
+        p.x += ((nx - p.x) / d) * allow
+        p.y += ((ny - p.y) / d) * allow
+      } else {
+        p.x = nx
+        p.y = ny
+      }
+      p.lastStateT = s.t
+      p.thrusting = !!cmd.thrusting
+      p.firing = !!cmd.firing
+      p.miningBody = Math.floor(cmd.miningBody)
       return { ok: true }
     }
 
     case 'transfer': {
-      if (dist(p.x, p.y, s.station.x, s.station.y) > C.DOCK_RANGE) return { ok: false, err: 'not docked' }
-      for (const r of Object.keys(p.hold) as MineRes[]) addStock(s, r, p.hold[r] ?? 0)
-      p.hold = {}
+      if (!(dist(p.x, p.y, s.station.x, s.station.y) <= C.DOCK_RANGE)) return { ok: false, err: 'not docked' }
+      for (const r of Object.keys(p.hold) as MineRes[]) {
+        const accepted = addStock(s, r, p.hold[r] ?? 0)
+        const left = (p.hold[r] ?? 0) - accepted
+        if (left > 0.001) p.hold[r] = left   // stores full: overflow stays in the hold
+        else delete p.hold[r]
+      }
       return { ok: true }
     }
 
     case 'build': {
       const def = MODULES[cmd.kind]
       if (!def?.buildable) return { ok: false, err: 'not buildable' }
+      if (!atStation(s, p.x, p.y)) return { ok: false, err: 'fly to the city to work the hull' }
       if (!inGrid(cmd.gx, cmd.gy)) return { ok: false, err: 'outside hull grid' }
       if (moduleAt(s, cmd.gx, cmd.gy)) return { ok: false, err: 'cell occupied' }
       if (neighbors(s, cmd.gx, cmd.gy).length === 0) return { ok: false, err: 'must attach to the station' }
@@ -42,6 +64,7 @@ export function applyCommand(s: GameState, pid: string, cmd: Command): CmdResult
     }
 
     case 'demolish': {
+      if (!atStation(s, p.x, p.y)) return { ok: false, err: 'fly to the city to work the hull' }
       const m = moduleAt(s, cmd.gx, cmd.gy)
       if (!m) return { ok: false, err: 'nothing there' }
       if (m.kind === 'core') return { ok: false, err: 'the core is the city' }
@@ -51,6 +74,7 @@ export function applyCommand(s: GameState, pid: string, cmd: Command): CmdResult
     }
 
     case 'repair': {
+      if (!atStation(s, p.x, p.y)) return { ok: false, err: 'fly to the city to work the hull' }
       const m = moduleAt(s, cmd.gx, cmd.gy)
       if (!m || m.hp >= C.MODULE_HP) return { ok: false, err: 'nothing to repair' }
       if (!canAfford(s.stocks, C.COST_REPAIR_MODULE)) return { ok: false, err: 'cannot afford' }
@@ -66,7 +90,7 @@ export function applyCommand(s: GameState, pid: string, cmd: Command): CmdResult
       if (!body || body.richness <= 0) return { ok: false, err: 'nothing to mine there' }
       if (body.id === s.mooringBodyId) return { ok: false, err: 'the city drinks from this one' }
       if (s.claims.some(cl => cl.bodyId === body.id)) return { ok: false, err: 'already claimed' }
-      if (dist(p.x, p.y, body.x, body.y) > 140) return { ok: false, err: 'fly closer to plant a rig' }
+      if (!(dist(p.x, p.y, body.x, body.y) <= C.INTERACT_RANGE_RIG)) return { ok: false, err: 'fly closer to plant a rig' }
       if (!canAfford(s.stocks, C.COST_RIG)) return { ok: false, err: 'cannot afford' }
       spend(s.stocks, C.COST_RIG)
       s.claims.push({ id: s.nextId++, bodyId: body.id, hp: C.RIG_HP, online: true, siloRes: body.res, silo: 0 })
@@ -105,7 +129,7 @@ export function applyCommand(s: GameState, pid: string, cmd: Command): CmdResult
       const claim = s.claims.find(cl => cl.id === cmd.claimId)
       const body = claim && s.bodies.find(b => b.id === claim.bodyId)
       if (!claim || !body || claim.hp >= C.RIG_HP) return { ok: false, err: 'nothing to repair' }
-      if (dist(p.x, p.y, body.x, body.y) > 140) return { ok: false, err: 'fly closer' }
+      if (!(dist(p.x, p.y, body.x, body.y) <= C.INTERACT_RANGE_RIG)) return { ok: false, err: 'fly closer' }
       if (!canAfford(s.stocks, C.COST_REPAIR_RIG)) return { ok: false, err: 'cannot afford' }
       spend(s.stocks, C.COST_REPAIR_RIG)
       claim.hp = C.RIG_HP
@@ -124,6 +148,7 @@ export function applyCommand(s: GameState, pid: string, cmd: Command): CmdResult
     case 'payToll': {
       const gate = s.npcs.find(n => n.id === cmd.npcId && n.kind === 'tollgate')
       if (!gate) return { ok: false, err: 'no gate' }
+      if (!(dist(p.x, p.y, gate.x, gate.y) <= C.INTERACT_RANGE_GATE)) return { ok: false, err: 'fly to the gate to parley' }
       if (s.stocks.isotopes < C.TOLL_PAYOFF_ISOTOPES) return { ok: false, err: 'cannot afford the lump' }
       s.stocks.isotopes -= C.TOLL_PAYOFF_ISOTOPES
       const lane = s.lanes.find(l => l.id === gate.laneId)
@@ -140,7 +165,7 @@ export function applyCommand(s: GameState, pid: string, cmd: Command): CmdResult
     case 'prospect': {
       const beacon = s.beacons.find(b => b.id === cmd.beaconId)
       if (!beacon || beacon.revealed) return { ok: false, err: 'nothing to survey' }
-      if (dist(p.x, p.y, beacon.x, beacon.y) > 150) return { ok: false, err: 'fly closer' }
+      if (!(dist(p.x, p.y, beacon.x, beacon.y) <= C.INTERACT_RANGE_BEACON)) return { ok: false, err: 'fly closer' }
       beacon.revealed = true
       addLog(s, `Survey: a mooring bearing ${beacon.mix}. Feed vein ${beacon.a0.toFixed(1)}/s, thinning over ~${Math.round(beacon.tau / 60)} occupied minutes.`, 'good')
       return { ok: true }
@@ -161,6 +186,7 @@ export function applyCommand(s: GameState, pid: string, cmd: Command): CmdResult
 
     case 'cancelWeigh': {
       if (s.weigh.phase !== 'countdown') return { ok: false, err: 'no countdown' }
+      if (!atStation(s, p.x, p.y)) return { ok: false, err: 'objections are lodged at the chart table — dock first' }
       s.weigh.phase = 'moored'
       s.weigh.optionId = -1
       addLog(s, `${p.name} objected. The city stays.`, 'info')
@@ -177,6 +203,10 @@ export function applyCommand(s: GameState, pid: string, cmd: Command): CmdResult
 
 function yardOnline(s: GameState): boolean {
   return s.modules.some(m => m.kind === 'yard' && m.online)
+}
+
+function atStation(s: GameState, x: number, y: number): boolean {
+  return dist(x, y, s.station.x, s.station.y) <= C.STATION_WORK_RANGE
 }
 
 /** Does segment AB pass within r of point C? */

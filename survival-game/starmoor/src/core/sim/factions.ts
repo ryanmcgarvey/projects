@@ -101,13 +101,16 @@ function spawnBreakers(s: GameState, tier: number) {
     addLog(s, 'Breaker tender inbound — they mean to strip the city itself. Man the guns.', 'bad')
     return
   }
+  // below tier 3, Breakers only hit field infrastructure — the station siege is
+  // the tier-3 escalation, never a default because you happen to own no claims
   const target = s.claims.sort((a, b) => b.silo - a.silo)[0]
+  if (!target) { s.factions.breakers.heat = Math.min(s.factions.breakers.heat, C.HEAT_T2 - 1); return }
   const n = 1 + tier
   for (let i = 0; i < n; i++) {
     const sk = spawnNpc(s, 'skiff', 'breakers', at.x + randRange(s, -50, 50), at.y + randRange(s, -50, 50), C.SKIFF_HP)
-    sk.targetBody = target ? target.id : -2
+    sk.targetBody = target.id
   }
-  addLog(s, target ? 'Breaker skiffs sighted, running for your silos.' : 'Breaker skiffs prowling the approaches.', 'warn')
+  addLog(s, 'Breaker skiffs sighted, running for your silos.', 'warn')
 }
 
 // --- Hush: wants you quiet ---
@@ -127,8 +130,11 @@ function tickHushMarks(s: GameState) {
   for (const m of s.modules) {
     if (m.markedUntil === 0 || s.t < m.markedUntil) continue
     m.markedUntil = 0
+    // judge only the dampable glare (galleries/hydro): running dark must always
+    // be able to avert, no matter how many modules the city runs
     const rates = emissionRates(s)
-    if (rates.glare < C.HUSH_AVERT_GLARE) {
+    const baseGlare = s.modules.filter(x => x.online).length * C.GLARE_MODULE
+    if (rates.glare - baseGlare < C.HUSH_AVERT_GLARE) {
       addLog(s, 'The city ran dark. The Hush passed over.', 'good')
       s.factions.hush.heat *= 0.6
     } else {

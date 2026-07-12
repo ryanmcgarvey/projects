@@ -82,6 +82,7 @@ export interface PlayerShip {
   thrusting: boolean
   firing: boolean
   miningBody: number         // body id or -1
+  lastStateT: number         // sim time of last accepted movement (displacement clamping)
 }
 
 export interface MooringOption {
@@ -130,6 +131,7 @@ export interface GameState {
   recruitAt: number          // sim time next recruit may arrive
   leaveAt: number            // sim time next disgruntled-crew departure may happen
   starvedSince: number       // sim time anchorfeed ran dry; 0 = fed
+  lowThriveSince: number     // sim time thrive fell below the leave threshold; 0 = fine
   thrive: number
 
   claims: Claim[]

@@ -38,6 +38,9 @@ export function tickHeat(s: GameState, dt: number, online: number) {
   s.factions.combine.heat += dt * p * (C.HEAT_COMBINE_WAKE * rates.wake + C.HEAT_COMBINE_WEALTH * wealth * 0.1)
   s.factions.breakers.heat += dt * p * C.HEAT_BREAKERS_SCRAP * scrap * 0.1
   s.factions.hush.heat += dt * p * (C.HEAT_HUSH_GLARE * rates.glare + C.HEAT_HUSH_CHATTER * rates.chatter)
+  // heat is a bounded meter (the tension is a tide chart, not an unbounded debt —
+  // and a standing encounter must not bank infinite escalation behind itself)
+  for (const f of Object.values(s.factions)) f.heat = Math.min(f.heat, C.HEAT_MAX)
 }
 
 export function tierOf(heat: number): 0 | 1 | 2 | 3 {

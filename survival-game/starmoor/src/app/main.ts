@@ -60,6 +60,7 @@ async function start(name: string, room: string) {
   let role: Role = 'pending'
   let state: GameState | null = null       // host: authoritative; guest: last snapshot
   let hostId: string | null = null
+  let hostSince = 0                        // duel demotion is only legal in the discovery window
   let lastStateAt = performance.now()
   let lastHelloAt = 0
 
@@ -73,6 +74,7 @@ async function start(name: string, room: string) {
     state = saved ?? createGame(room)
     role = 'host'
     hostId = null
+    hostSince = performance.now()
     for (const pid of Object.keys(state.players))
       if (pid !== net.selfId && !net.peers.has(pid)) removePlayer(state, pid)
     ensurePlayer(state, net.selfId, name)
@@ -104,13 +106,18 @@ async function start(name: string, room: string) {
     },
     onWorld: (raw, from) => {
       if (role === 'host') return
-      const st = deserialize(raw)
+      const st = deserialize(raw)              // validated: junk returns null
       if (st) adoptState(st, from)
     },
-    onState: (snap, from) => {
-      const st = snap as GameState
+    onState: (raw, from) => {
+      if (role === 'guest' && hostId && from !== hostId) return  // only the host speaks for the world
+      const st = deserialize(raw)              // validated: junk returns null
+      if (!st) return
       if (role === 'host' && state) {
-        if (st.t > state.t) adoptState(st, from)   // duel: the older world wins
+        // duel resolution (two hosts promoted during discovery): the older world
+        // wins — but demotion is only legal in the first 30s of our own reign,
+        // so an established server can never be seized by a forged snapshot
+        if (st.t > state.t && performance.now() - hostSince < 30_000) adoptState(st, from)
       } else {
         adoptState(st, from)
       }
@@ -169,13 +176,13 @@ async function start(name: string, room: string) {
     const me = s.players[net.selfId]
     const alive = !!me && me.downUntil <= s.t
 
-    // ship physics (client-authoritative)
+    // ship physics (client-side integration; core clamps displacement regardless)
     if (alive && !buildMode) {
       const ax = input.axis()
-      velX += ax.x * 260 * dt
-      velY += ax.y * 260 * dt
+      velX += ax.x * C.SHIP_ACCEL * dt
+      velY += ax.y * C.SHIP_ACCEL * dt
     }
-    const drag = Math.exp(-1.6 * dt)
+    const drag = Math.exp(-C.SHIP_DRAG * dt)
     velX *= drag; velY *= drag
     const sp = Math.hypot(velX, velY)
     if (sp > C.SHIP_SPEED) { velX *= C.SHIP_SPEED / sp; velY *= C.SHIP_SPEED / sp }
@@ -189,13 +196,19 @@ async function start(name: string, room: string) {
     const stateCmd: Command = { c: 'state', x: selfX, y: selfY, thrusting, firing, miningBody }
     if (role === 'host') {
       applyCommand(s, net.selfId, stateCmd)
+      // core may have clamped or respawned us — big divergence means the sim moved
+      // us (respawn) or refused the move; local integration follows the sim
+      if (me) {
+        const dv = Math.hypot(me.x - selfX, me.y - selfY)
+        if (dv > 40) { selfX = me.x; selfY = me.y; velX = 0; velY = 0 }
+      }
       simAcc += dt
       while (simAcc >= C.TICK) {
         tick(s, C.TICK, Object.keys(s.players).length)
         simAcc -= C.TICK
       }
       castAcc += dt
-      if (castAcc >= 0.25) { castAcc = 0; net.state(s) }
+      if (castAcc >= 0.25) { castAcc = 0; net.state(serialize(s)) }
       saveAcc += dt
       if (saveAcc >= 10) { saveAcc = 0; persist.save(room, serialize(s)) }
     } else {
@@ -247,7 +260,7 @@ async function start(name: string, room: string) {
       hudAcc = 0
       hud.update(
         chartTable(s), factionsView(s), emissionsView(s),
-        me ? { hull: Math.max(0, me.hull), hold: me.hold, holdTotal: holdTotal(me) } : null,
+        me ? { hull: Math.max(0, me.hull), hold: me.hold, holdTotal: holdTotal(me), holdCap: C.HOLD_CAP } : null,
         s.crew, s.stocks, s.log,
       )
       $('down-overlay').style.display = me && me.downUntil > s.t ? 'flex' : 'none'
@@ -276,20 +289,20 @@ function scanAction(s: GameState, pid: string, x: number, y: number): [Command |
 
   // toll gate: pay the lump
   for (const n of s.npcs) {
-    if (n.kind === 'tollgate' && near(n.x, n.y, 160)) {
+    if (n.kind === 'tollgate' && near(n.x, n.y, C.INTERACT_RANGE_GATE)) {
       return [{ c: 'payToll', npcId: n.id }, `<b>[E]</b> Pay the Combine's lump (${C.TOLL_PAYOFF_ISOTOPES} isotopes) — or burn the gate`]
     }
   }
   // beacons
   for (const b of s.beacons) {
-    if (!b.revealed && near(b.x, b.y, 150)) {
+    if (!b.revealed && near(b.x, b.y, C.INTERACT_RANGE_BEACON)) {
       return [{ c: 'prospect', beaconId: b.id }, '<b>[E]</b> Survey the mooring beacon']
     }
   }
   // claims: repair / lane / picket
   for (const cl of s.claims) {
     const body = s.bodies.find(b => b.id === cl.bodyId)
-    if (!body || !near(body.x, body.y, 140)) continue
+    if (!body || !near(body.x, body.y, C.INTERACT_RANGE_RIG)) continue
     if (cl.hp < C.RIG_HP) return [{ c: 'repairRig', claimId: cl.id }, '<b>[E]</b> Repair the claim rig (5 fe)']
     const lane = s.lanes.find(l => l.claimId === cl.id)
     if (!lane) return [yard ? { c: 'lane', claimId: cl.id } : null,
