@@ -15,6 +15,7 @@ prototypes and let playtesting decide — Husklight is draft 1.
 | [design/golden-rules.md](design/golden-rules.md) | The constitution: 16 rules distilled from the eight founding goals, with smell tests, the tensions they resolve, and which rules are load-bearing vs. aspirational. Start here. |
 | [design/settings/](design/settings/README.md) | Ten candidate settings, each fully developed and adversarially critiqued, with a scoreboard, cross-cutting lessons, a recommendation, and a "steal list" of transplantable mechanics. |
 | [husklight/](husklight/) | **Playable draft 1** of the Husklight setting: browser co-op prototype — power triage, air, entropy breaches, cryo stewardship, and the first automation layer. Static Vite app, P2P multiplayer, no backend. |
+| [starmoor/](starmoor/) | **Playable MVP** of the Starmoor concept (steelmanned): taper + Fix + three predator factions, rigs/lanes/pickets/crew automation, thrive, and the full Weigh cycle. Pure dependency-free sim core behind enforced boundaries — renderer/net/persistence are swappable adapters. |
 
 ## Where we are
 
@@ -22,5 +23,7 @@ prototypes and let playtesting decide — Husklight is draft 1.
 2. ✅ Golden rules drafted and pressure-tested
 3. ✅ Ten settings explored and critiqued — top tier: **Husklight**, **Saltmoon**, **Hallowmoor**
 4. ✅ First playable draft: Husklight (core loop: pressure + sacrifice + one automation layer + the offline contract)
-5. ⬜ Deploy + playtest with 2-4 people; tune the pressure curve
-6. ⬜ Draft 2 of Husklight (Verdance/combat, Inspection Protocol) — or a rival setting prototype to compare
+5. ✅ Starmoor MVP built, reviewed (30 adversarially-verified findings fixed), and deployed
+6. ⬜ Playtest both prototypes with 2-4 people; decide which loop bites harder
+
+**Live prototypes** (one Vercel project hosts both): [Husklight](https://husklight-ryanmcgarveys-projects.vercel.app/) · [Starmoor](https://husklight-ryanmcgarveys-projects.vercel.app/starmoor/)
